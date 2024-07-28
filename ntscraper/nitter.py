@@ -8,8 +8,6 @@ from random import uniform
 from re import match, sub
 from datetime import datetime
 import logging
-from logging.handlers import QueueHandler
-from multiprocessing import Pool, Queue, cpu_count
 from sys import stdout
 from tqdm import tqdm
 
@@ -20,10 +18,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(stdout)],
 )
 
-log_queue = Queue()
-log_handler = QueueHandler(log_queue)
 root_logger = logging.getLogger()
-root_logger.addHandler(log_handler)
 
 valid_filters = [
     "nativeretweets",
@@ -923,10 +918,6 @@ class Nitter:
                 instance,
             )
         else:
-            if len(terms) > cpu_count():
-                raise ValueError(
-                    f"Too many terms. You can search at most {cpu_count()} terms."
-                )
 
             args = [
                 (
@@ -945,10 +936,6 @@ class Nitter:
                 )
                 for term in terms
             ]
-            with Pool(len(terms)) as p:
-                results = list(p.map(self._search_dispatch, args))
-
-            return results
 
     def _profile_info(self, username, max_retries, instance):
         """
@@ -1085,25 +1072,6 @@ class Nitter:
             username = username.strip()
 
             return self._profile_info(username, max_retries, instance)
-        elif len(username) == 1:
-            username = username[0].strip()
-
-            return self._profile_info(username, max_retries, instance)
         else:
-            if len(username) > cpu_count():
-                raise ValueError(
-                    f"Too many usernames. You can use at most {cpu_count()} usernames."
-                )
-
-            args = [
-                (
-                    user.strip(),
-                    max_retries,
-                    instance,
-                )
-                for user in username
-            ]
-            with Pool(len(username)) as p:
-                results = list(p.map(self._search_profile_dispatch, args))
-
-            return results
+            username = username[0].strip()
+            return self._profile_info(username, max_retries, instance)
